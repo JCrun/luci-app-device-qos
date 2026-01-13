@@ -47,13 +47,6 @@ function url.validate(self, value, section)
 	return value
 end
 
--- 处理手动更新请求
-local http = require "luci.http"
-if http.formvalue("update_rules") then
-	luci.sys.call("/usr/libexec/device-qos/rules-update >/dev/null 2>&1")
-	http.redirect(luci.dispatcher.build_url("admin", "network", "device_qos", "providers"))
-end
-
 -- 添加更新按钮
 local btn = s:option(DummyValue, "_update")
 btn.template = "device_qos/update_button"

@@ -7,6 +7,7 @@ function index()
  entry({"admin","network","device_qos","devices"}, cbi("device_qos/devices"), "设备管理", 30).leaf = true
  entry({"admin","network","device_qos","limits"}, cbi("device_qos/limits"), "限速规则", 40).leaf = true
  entry({"admin","network","device_qos","service"}, call("action_service"), "服务控制", 50).leaf = true
+ entry({"admin","network","device_qos","update_rules"}, call("action_update_rules"), nil).leaf = true
 end
 function action_service()
  local http = require "luci.http"
@@ -18,4 +19,14 @@ function action_service()
  if cmd == "restart" or cmd == "reload" then ok = util.exec("/etc/init.d/device-qos reload") == "" end
  http.prepare_content("application/json")
  http.write_json({success=ok})
+end
+function action_update_rules()
+ local http = require "luci.http"
+ local util = require "luci.util"
+ 
+ -- 执行规则更新脚本
+ local result = util.exec("/usr/libexec/device-qos/rules-update 2>&1")
+ 
+ -- 重定向回规则源页面
+ http.redirect(luci.dispatcher.build_url("admin", "network", "device_qos", "providers"))
 end
