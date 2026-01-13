@@ -1,0 +1,122 @@
+#!/bin/sh
+# Device QoS - Rule Provider Updater (V1)
+# Fetches rules from Rule Providers (e.g., Clash) and updates nftables/dnsmasq
+
+CFG="device_qos"
+DNSMASQ_CONF="/etc/dnsmasq.d/device-qos.conf"
+NFT_TABLE="device_qos"
+RULES_DIR="/etc/device_qos/rules"
+
+log_info() {
+	echo "INFO: $@" >&2
+	logger -t "device-qos-update" "$@"
+}
+
+log_error() {
+	echo "ERROR: $@" >&2
+	logger -t "device-qos-update" -p err "$@"
+}
+
+ensure_dir() {
+	mkdir -p "$RULES_DIR"
+	mkdir -p "$(dirname "$DNSMASQ_CONF")"
+}
+
+download_file() {
+	local url="$1"
+	local out="$2"
+	if command -v curl >/dev/null 2>&1; then
+		curl -sL --retry 3 --connect-timeout 10 "$url" -o "$out"
+	elif command -v wget >/dev/null 2>&1; then
+		wget -q --no-check-certificate -T 10 "$url" -O "$out"
+	else
+		log_error "No curl or wget found"
+		return 1
+	fi
+}
+
+process_clash_provider() {
+	local name="$1"
+	local url="$2"
+	local appname="$3"
+	
+	local tmp_file="/tmp/clash_${name}.yaml"
+	local set_ip4="app_${appname}_ip4"
+	local set_net4="app_${appname}_net4"
+	
+	log_info "Processing provider $name ($appname)..."
+	
+	if ! download_file "$url" "$tmp_file"; then
+		log_error "Failed to download $url"
+		return 1
+	fi
+	
+	# Parse Domains -> dnsmasq (nftset ip4 & ip6)
+	# Strict match: DOMAIN or DOMAIN-SUFFIX
+	# Strip comments and whitespace
+	local domain_list=$(grep -E '^\s*-\s*(DOMAIN|DOMAIN-SUFFIX),' "$tmp_file" | awk -F',' '{print $2}' | awk -F'#' '{print $1}' | tr -d '[:space:]')
+	
+	if [ -n "$domain_list" ]; then
+		for domain in $domain_list; do
+			if ! grep -q "/${domain}/" "$DNSMASQ_CONF"; then
+				# V1.2: Add both IPv4 and IPv6 nftset directives
+				echo "nftset=/${domain}/4#inet#${NFT_TABLE}#${set_ip4}" >> "$DNSMASQ_CONF"
+				echo "nftset=/${domain}/6#inet#${NFT_TABLE}#${set_ip6}" >> "$DNSMASQ_CONF"
+			fi
+		done
+		log_info "Integrated domains from $name"
+	fi
+	
+	# Parse IP-CIDR -> nftables (set net4)
+	# Strict match: IP-CIDR (excludes IP-CIDR6)
+	local cidr_list=$(grep -E '^\s*-\s*IP-CIDR,' "$tmp_file" | awk -F',' '{print $2}' | awk -F'#' '{print $1}' | tr -d '[:space:]')
+	
+	if [ -n "$cidr_list" ]; then
+		for cidr in $cidr_list; do
+			nft add element inet "$NFT_TABLE" "$set_net4" { "$cidr" } 2>/dev/null
+		done
+		log_info "Integrated IP-CIDRs from $name"
+	fi
+
+	# Parse IP-CIDR6 -> nftables (set net6)
+	local cidr6_list=$(grep -E '^\s*-\s*IP-CIDR6,' "$tmp_file" | awk -F',' '{print $2}' | awk -F'#' '{print $1}' | tr -d '[:space:]')
+	
+	if [ -n "$cidr6_list" ]; then
+		# Ensure set exists (might fail if main script hasn't run, but safe to try)
+		nft add set inet "$NFT_TABLE" "$set_net6" { type ipv6_addr \; flags interval \; } 2>/dev/null
+		for cidr in $cidr6_list; do
+			nft add element inet "$NFT_TABLE" "$set_net6" { "$cidr" } 2>/dev/null
+		done
+		log_info "Integrated IP-CIDR6s from $name"
+	fi
+	
+	rm -f "$tmp_file"
+}
+
+main() {
+	ensure_dir
+	
+	local providers=$(uci show "$CFG" | grep "=provider$" | cut -d. -f2 | cut -d= -f1)
+	local needs_reload=0
+	
+	for pname in $providers; do
+		local psec="$CFG.$pname"
+		local type=$(uci -q get "$psec.type")
+		local url=$(uci -q get "$psec.url")
+		local app=$(uci -q get "$psec.app")
+		local enabled=$(uci -q get "$psec.enabled" || echo "1") # Default enable
+		
+		if [ "$enabled" = "1" ] && [ "$type" = "clash" ] && [ -n "$url" ] && [ -n "$app" ]; then
+			if process_clash_provider "$pname" "$url" "$app"; then
+				needs_reload=1
+			fi
+		fi
+	done
+	
+	if [ "$needs_reload" = "1" ]; then
+		/etc/init.d/dnsmasq restart >/dev/null 2>&1
+		log_info "Rules updated and services reloaded."
+	fi
+}
+
+main

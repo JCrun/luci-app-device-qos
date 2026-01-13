@@ -1,0 +1,27 @@
+# General
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.log
+
+# Build outputs (OpenWrt / LuCI)
+bin/
+bin/*
+build_dir/
+staging_dir/
+tmp/
+tmp/*
+*.ipk
+*.tar.gz
+*.tar.bz2
+
+# Editor / IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Node / frontend (if used later)
+node_modules/
+dist/
+

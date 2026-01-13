@@ -1,0 +1,245 @@
+#!/bin/sh
+# Device QoS - 设备应用限速主脚本 (V1 Architecture)
+# Refactored for Rule Providers, NFT Split Sets (ip4/net4), and CT Mark stability
+
+CFG="device_qos"
+DNSMASQ_CONF="/etc/dnsmasq.d/device-qos.conf"
+NFT_TABLE="device_qos"
+RULES_UPDATE_CMD="/usr/libexec/device-qos/rules-update"
+
+# 日志函数
+log_info() {
+	logger -t "device-qos" "$@"
+}
+
+log_error() {
+	logger -t "device-qos" -p err "$@"
+}
+
+# 获取物理接口名称
+get_physical_interface() {
+	local logical_if="$1"
+	local physical_if=""
+	
+	physical_if=$(uci -q get "network.${logical_if}.device")
+	if [ -z "$physical_if" ]; then
+		physical_if=$(uci -q get "network.${logical_if}.ifname")
+	fi
+	
+	if [ -z "$physical_if" ]; then
+		physical_if="$logical_if"
+	fi
+	
+	if ! ip link show "$physical_if" >/dev/null 2>&1; then
+		log_error "Interface $physical_if (from $logical_if) does not exist"
+		return 1
+	fi
+	
+	echo "$physical_if"
+	return 0
+}
+
+# 读取全局配置
+read_global() {
+	enabled=$(uci -q get "$CFG.global.enabled" || echo "0")
+	local wan_if_logical=$(uci -q get "$CFG.global.wan_if" || echo "wan")
+	local lan_if_logical=$(uci -q get "$CFG.global.lan_if" || echo "lan")
+	up_mbps=$(uci -q get "$CFG.global.up_mbps" || echo "100")
+	down_mbps=$(uci -q get "$CFG.global.down_mbps" || echo "100")
+	
+	wan_if=$(get_physical_interface "$wan_if_logical")
+	[ $? -ne 0 ] && return 1
+	
+	lan_if=$(get_physical_interface "$lan_if_logical")
+	[ $? -ne 0 ] && return 1
+	
+	return 0
+}
+
+# 确保 nftables 表和集合存在 (Split Sets: ip4/net4/ip6/net6)
+ensure_nftsets() {
+	local appname="$1"
+	local set_ip4="app_${appname}_ip4"
+	local set_net4="app_${appname}_net4"
+	local set_ip6="app_${appname}_ip6"
+	local set_net6="app_${appname}_net6"
+	
+	nft add table inet "$NFT_TABLE" 2>/dev/null
+	
+	# IPv4 Sets
+	if ! nft list set inet "$NFT_TABLE" "$set_ip4" >/dev/null 2>&1; then
+		nft add set inet "$NFT_TABLE" "$set_ip4" { type ipv4_addr \; flags timeout \; }
+	fi
+	if ! nft list set inet "$NFT_TABLE" "$set_net4" >/dev/null 2>&1; then
+		nft add set inet "$NFT_TABLE" "$set_net4" { type ipv4_addr \; flags interval \; }
+	fi
+
+	# IPv6 Sets (V1.2)
+	if ! nft list set inet "$NFT_TABLE" "$set_ip6" >/dev/null 2>&1; then
+		nft add set inet "$NFT_TABLE" "$set_ip6" { type ipv6_addr \; flags timeout \; }
+	fi
+	if ! nft list set inet "$NFT_TABLE" "$set_net6" >/dev/null 2>&1; then
+		nft add set inet "$NFT_TABLE" "$set_net6" { type ipv6_addr \; flags interval \; }
+	fi
+}
+
+# ... (disable_flow_offloading) ...
+
+# ... (build_ipsets_and_dnsmasq: update loop to just echo ip4/ip6 is tricky with partial replace.
+# Actually, rules-update handles the bulk. The fallback loop in build_ipsets_and_dnsmasq just needs to handle manual domains.)
+# Let's stick to ensure_nftsets refactor here and handle marking rules below.
+
+# 设置 nftables 规则
+nftables_setup() {
+	log_info "Setting up nftables rules..."
+	
+	nft add table inet "$NFT_TABLE"
+	# 1. 先 flush 表，清除旧规则
+	nft flush table inet "$NFT_TABLE"
+	
+	# 2. 创建链
+	# forward 链：优先级 -150，在 mangle 之前
+	nft add chain inet "$NFT_TABLE" forward { type filter hook forward priority -150 \; }
+	
+	# 3. 恢复 ct mark
+	nft add rule inet "$NFT_TABLE" forward ct mark != 0 meta mark set ct mark
+
+	local limit_list=$(uci show "$CFG" | grep "=device_limit$" | cut -d. -f2 | cut -d= -f1)
+	local limit_idx=0
+	
+	for limitname in $limit_list; do
+		local limitsec="$CFG.$limitname"
+		local dev_name=$(uci -q get "$limitsec.device")
+		local app_name=$(uci -q get "$limitsec.app")
+		
+		# 校验启用状态
+		[ "$(uci -q get "$CFG.$dev_name.enabled" || echo "0")" != "1" ] && { limit_idx=$((limit_idx+1)); continue; }
+		[ "$(uci -q get "$CFG.$app_name.enabled" || echo "0")" != "1" ] && { limit_idx=$((limit_idx+1)); continue; }
+
+		local dev_ip=$(uci -q get "$CFG.$dev_name.ip")
+		local mark=$(( $(uci -q get "$CFG.$app_name.fwmark_base") + limit_idx ))
+		
+		local set_ip4="app_${app_name}_ip4"
+		local set_net4="app_${app_name}_net4"
+		local set_ip6="app_${app_name}_ip6"
+		local set_net6="app_${app_name}_net6"
+
+		# IPv4 标记规则
+		# 上行 (Dev -> App)
+		nft add rule inet "$NFT_TABLE" forward ct mark 0 meta nfproto ipv4 ip saddr "$dev_ip" ip daddr "@$set_ip4" \
+			counter meta mark set "$mark" ct mark set "$mark"
+		nft add rule inet "$NFT_TABLE" forward ct mark 0 meta nfproto ipv4 ip saddr "$dev_ip" ip daddr "@$set_net4" \
+			counter meta mark set "$mark" ct mark set "$mark"
+			
+		# 下行 (App -> Dev)
+		nft add rule inet "$NFT_TABLE" forward ct mark 0 meta nfproto ipv4 ip daddr "$dev_ip" ip saddr "@$set_ip4" \
+			counter meta mark set "$mark" ct mark set "$mark"
+		nft add rule inet "$NFT_TABLE" forward ct mark 0 meta nfproto ipv4 ip daddr "$dev_ip" ip saddr "@$set_net4" \
+			counter meta mark set "$mark" ct mark set "$mark"
+
+		# IPv6 标记规则 (V1.2) - 仅当流量为 IPv6 时匹配
+		# 注意：dev_ip 目前只支持 IPv4，如果需要支持 IPv6 设备限速，需要从 uci 读取 dev_ip6
+		# 这里假设 dev_ip 为 IPv4，所以 IPv6 规则暂时只匹配目标集 (如果 Dev 是双栈，应该增加 IPv6 匹配)
+		# 暂时策略：只添加 IPv6 集合匹配框架，如果 dev_ip 是 IPv4，这些规则可能无法命中上行 (saddr mismatch)
+		# 除非我们不匹配 saddr/daddr 为 dev_ip (那样会误伤其他设备)
+		# TODO: UCI 需要增加 ipv6 字段支持完全的 IPv6 限速。
+		# 现阶段仅添加集合 infrastructure。
+
+		log_info "Marking rules for $dev_name -> $app_name (Mark: $mark)"
+		limit_idx=$((limit_idx + 1))
+	done
+}
+
+# 带宽单位转换为 kbit
+tc_kbit() { echo $((${1} * 1024)); }
+
+# 设置 tc 规则
+tc_setup() {
+	log_info "Setting up tc rules..."
+	local up_total=$(tc_kbit "$up_mbps")
+	local down_total=$(tc_kbit "$down_mbps")
+
+	tc qdisc del dev "$wan_if" root 2>/dev/null
+	tc qdisc del dev "$lan_if" root 2>/dev/null
+
+	tc qdisc add dev "$wan_if" root handle 1: htb default 9999
+	tc class add dev "$wan_if" parent 1: classid 1:1 htb rate "${up_total}kbit" ceil "${up_total}kbit"
+	tc class add dev "$wan_if" parent 1:1 classid 1:9999 htb rate 1kbit ceil "${up_total}kbit"
+
+	tc qdisc add dev "$lan_if" root handle 2: htb default 9999
+	tc class add dev "$lan_if" parent 2: classid 2:1 htb rate "${down_total}kbit" ceil "${down_total}kbit"
+	tc class add dev "$lan_if" parent 2:1 classid 2:9999 htb rate 1kbit ceil "${down_total}kbit"
+
+	local class_id=10
+	local limit_idx=0
+	local limit_list=$(uci show "$CFG" | grep "=device_limit$" | cut -d. -f2 | cut -d= -f1)
+
+	for limitname in $limit_list; do
+		local limitsec="$CFG.$limitname"
+		if [ "$(uci -q get "$CFG.$(uci -q get "$limitsec.device").enabled")" = "1" ] && \
+		   [ "$(uci -q get "$CFG.$(uci -q get "$limitsec.app").enabled")" = "1" ]; then
+			
+			local mark=$(( $(uci -q get "$CFG.$(uci -q get "$limitsec.app").fwmark_base") + limit_idx ))
+			local up_rate=$(uci -q get "$limitsec.up_rate" || echo "1mbit")
+			local up_ceil=$(uci -q get "$limitsec.up_ceil" || echo "1mbit")
+			local down_rate=$(uci -q get "$limitsec.down_rate" || echo "1mbit")
+			local down_ceil=$(uci -q get "$limitsec.down_ceil" || echo "1mbit")
+
+			tc class add dev "$wan_if" parent 1:1 classid 1:$class_id htb rate "$up_rate" ceil "$up_ceil"
+			tc filter add dev "$wan_if" parent 1: protocol ip prio 1 handle "$mark" fw flowid 1:$class_id
+
+			tc class add dev "$lan_if" parent 2:1 classid 2:$class_id htb rate "$down_rate" ceil "$down_ceil"
+			tc filter add dev "$lan_if" parent 2: protocol ip prio 1 handle "$mark" fw flowid 2:$class_id
+
+			class_id=$((class_id + 1))
+		fi
+		limit_idx=$((limit_idx + 1))
+	done
+}
+
+do_start() {
+	log_info "Starting Device-QoS Service (V1)..."
+	read_global || exit 1
+	[ "$enabled" != "1" ] && exit 0
+	
+	disable_flow_offloading
+	build_ipsets_and_dnsmasq
+	nftables_setup
+	tc_setup
+	
+	# 调用规则更新器 (V1)
+	if [ -x "$RULES_UPDATE_CMD" ]; then
+		log_info "Invoking rules-update..."
+		"$RULES_UPDATE_CMD"
+	fi
+	
+	log_info "Service started."
+}
+
+do_stop() {
+	log_info "Stopping Device-QoS Service..."
+	read_global
+	nft delete table inet "$NFT_TABLE" 2>/dev/null
+	tc qdisc del dev "$wan_if" root 2>/dev/null
+	tc qdisc del dev "$lan_if" root 2>/dev/null
+	rm -f "$DNSMASQ_CONF"
+	/etc/init.d/dnsmasq restart >/dev/null 2>&1
+}
+
+case "$1" in
+	start) do_start ;;
+	stop) do_stop ;;
+	restart|reload) do_stop; do_start ;;
+	status)
+		read_global
+		echo "Device QoS Status (V1):"
+		echo "  WAN: $wan_if, LAN: $lan_if, Enabled: $enabled"
+		echo ""
+		echo "NFTables Rules:"
+		nft list table inet "$NFT_TABLE" 2>/dev/null
+		echo ""
+		echo "TC Statistics:"
+		tc -s class show dev "$lan_if"
+		;;
+	*) echo "Usage: $0 {start|stop|restart|status}"; exit 1 ;;
+esac

@@ -1,0 +1,43 @@
+<% local util=require "luci.util" local sys=require "luci.sys" local fs=require "nixio.fs" -- Service Status local
+	running=(sys.call("ps | grep -v grep | grep device-qos>/dev/null") == 0)
+	local status_text = running and translate("RUNNING") or translate("STOPPED")
+	local status_color = running and "green" or "red"
+
+	-- Last Update Time
+	local conf_file = "/etc/dnsmasq.d/device-qos.conf"
+	local last_update = translate("Never")
+	local stat = fs.stat(conf_file)
+	if stat then
+	last_update = os.date("%Y-%m-%d %H:%M:%S", stat.mtime)
+	end
+
+	-- Mode check
+	local firewall_mode = "NFTables"
+	-%>
+
+	<div class="cbi-section">
+		<h3>
+			<%:Status Dashboard%>
+		</h3>
+		<div class="cbi-section-node">
+			<div class="cbi-value">
+				<label class="cbi-value-title">
+					<%:Service Status%>
+				</label>
+				<div class="cbi-value-field">
+					<span style="color:<%=status_color%>; font-weight:bold">
+						<%=status_text%>
+					</span>
+					<span style="color:#999; margin-left:10px;">(Mode: <%=firewall_mode%>)</span>
+				</div>
+			</div>
+			<div class="cbi-value">
+				<label class="cbi-value-title">
+					<%:Last Rules Update%>
+				</label>
+				<div class="cbi-value-field">
+					<%=last_update%>
+				</div>
+			</div>
+		</div>
+	</div>

@@ -1,0 +1,80 @@
+# 全局配置
+config global 'global'
+	option enabled '0'
+	option wan_if 'wan'
+	option lan_if 'lan'
+	option up_mbps '100'
+	option down_mbps '100'
+
+# 应用定义示例：抖音
+config app 'douyin'
+	option enabled '1'
+	option name '抖音短视频'
+	option desc '抖音及其相关CDN域名'
+	option fwmark_base '1000'
+	list domains 'douyin.com'
+	list domains 'amemv.com'
+	list domains 'snssdk.com'
+	list domains 'bytecdn.cn'
+
+# 应用定义示例：哔哩哔哩
+config app 'bilibili'
+	option enabled '1'
+	option name '哔哩哔哩'
+	option desc 'B站视频及直播'
+	option fwmark_base '2000'
+	list domains 'bilibili.com'
+	list domains 'bilivideo.com'
+	list domains 'biliapi.net'
+	list domains 'hdslb.com'
+
+# 应用定义示例：腾讯视频
+config app 'txvideo'
+	option enabled '1'
+	option name '腾讯视频'
+	option desc '腾讯视频流媒体'
+	option fwmark_base '3000'
+	list domains 'v.qq.com'
+	list domains 'video.qq.com'
+	list domains 'vv.video.qq.com'
+
+# 设备示例：小明的手机
+config device 'phone1'
+	option enabled '1'
+	option name '小明的手机'
+	option desc '华为 Mate 40'
+	option ip '192.168.1.100'
+
+# 设备示例：客厅电视
+config device 'tv1'
+	option enabled '1'
+	option name '客厅电视'
+	option desc '小米电视'
+	option ip '192.168.1.101'
+
+# 限速规则：小明的手机 - 抖音
+config device_limit 'phone1_douyin'
+	option device 'phone1'
+	option app 'douyin'
+	option up_rate '512kbit'
+	option up_ceil '1mbit'
+	option down_rate '2mbit'
+	option down_ceil '5mbit'
+
+# 限速规则：小明的手机 - 哔哩哔哩
+config device_limit 'phone1_bilibili'
+	option device 'phone1'
+	option app 'bilibili'
+	option up_rate '1mbit'
+	option up_ceil '2mbit'
+	option down_rate '3mbit'
+	option down_ceil '10mbit'
+
+# 限速规则：客厅电视 - 腾讯视频
+config device_limit 'tv1_txvideo'
+	option device 'tv1'
+	option app 'txvideo'
+	option up_rate '1mbit'
+	option up_ceil '2mbit'
+	option down_rate '5mbit'
+	option down_ceil '15mbit'

@@ -1,0 +1,9 @@
+<%+cbi /valueheader%>
+    <input class="cbi-button cbi-button-apply" type="button" value="<%:立即更新规则%>"
+        onclick="location.href='<%=luci.dispatcher.build_url(" admin/network/device_qos/providers")%>?update_rules=1'"
+    />
+    <div class="cbi-value-description">
+        <span class="cbi-value-helpicon"><img src="<%=resource%>/cbi/help.gif" alt="help" /></span>
+        <%:点击此按钮将立即从所有启用的规则源下载最新规则并重新加载服务。这可能需要几秒钟。%>
+    </div>
+    <%+cbi /valuefooter%>

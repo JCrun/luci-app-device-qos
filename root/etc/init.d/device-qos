@@ -1,0 +1,13 @@
+#!/bin/sh /etc/rc.common
+START=96
+STOP=10
+USE_PROCD=0
+start() {
+ /usr/sbin/device-qos start
+}
+stop() {
+ /usr/sbin/device-qos stop
+}
+reload() {
+ /usr/sbin/device-qos reload
+}
