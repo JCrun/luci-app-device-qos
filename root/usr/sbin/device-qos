@@ -83,11 +83,65 @@ ensure_nftsets() {
 	fi
 }
 
-# ... (disable_flow_offloading) ...
+# 关闭流量分载（避免与 QoS / nftables 规则冲突）
+disable_flow_offloading() {
+	# 尝试关闭软件/硬件流控（如果存在）
+	local fw_def="firewall.@defaults[0]"
 
-# ... (build_ipsets_and_dnsmasq: update loop to just echo ip4/ip6 is tricky with partial replace.
-# Actually, rules-update handles the bulk. The fallback loop in build_ipsets_and_dnsmasq just needs to handle manual domains.)
-# Let's stick to ensure_nftsets refactor here and handle marking rules below.
+	local changed=0
+
+	if [ "$(uci -q get ${fw_def}.flow_offloading)" = "1" ]; then
+		uci set ${fw_def}.flow_offloading='0'
+		changed=1
+	fi
+
+	if [ "$(uci -q get ${fw_def}.flow_offloading_hw)" = "1" ]; then
+		uci set ${fw_def}.flow_offloading_hw='0'
+		changed=1
+	fi
+
+	if [ "$changed" = "1" ]; then
+		log_info "Disabling firewall flow offloading..."
+		uci commit firewall
+		/etc/init.d/firewall reload >/dev/null 2>&1
+	fi
+}
+
+# 根据静态应用域名构建 dnsmasq 配置，并确保 nft sets 创建
+build_ipsets_and_dnsmasq() {
+	log_info "Building dnsmasq config and nft sets for static app domains..."
+
+	# 确保目录存在
+	mkdir -p "$(dirname "$DNSMASQ_CONF")"
+
+	# 清空旧配置
+	: > "$DNSMASQ_CONF"
+
+	# 遍历所有 app
+	local app_list appname appsec enabled name
+	app_list=$(uci show "$CFG" 2>/dev/null | grep "=app$" | cut -d. -f2 | cut -d= -f1)
+
+	for appname in $app_list; do
+		appsec="$CFG.$appname"
+
+		enabled=$(uci -q get "$appsec.enabled" || echo "1")
+		[ "$enabled" != "1" ] && continue
+
+		# 为该应用创建 nft sets
+		ensure_nftsets "$appname"
+
+		# 提取域名列表（list domains）
+		local domain
+		for domain in $(uci -q show "$appsec" | sed -n "s/.*\\.domains='\\(.*\\)'/\\1/p"); do
+			# 写入 dnsmasq nftset 规则 (IPv4 & IPv6)
+			echo "nftset=/${domain}/4#inet#${NFT_TABLE}#app_${appname}_ip4" >> "$DNSMASQ_CONF"
+			echo "nftset=/${domain}/6#inet#${NFT_TABLE}#app_${appname}_ip6" >> "$DNSMASQ_CONF"
+		done
+	done
+
+	# 重新加载 dnsmasq，使配置生效
+	/etc/init.d/dnsmasq restart >/dev/null 2>&1 || true
+}
 
 # 设置 nftables 规则
 nftables_setup() {
