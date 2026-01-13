@@ -1,6 +1,6 @@
 -- 设备应用限速 - 限速规则配置
 local m = Map("device_qos", translate("限速规则"),
-	translate("为特定设备的特定应用配置上传和下载带宽限制"))
+	translate("为特定设备的特定应用配置上传和下载带宽限制。Rate（保证）为最小保证带宽，Ceil（上限）为最大带宽。"))
 
 local s = m:section(TypedSection, "device_limit", translate("限速规则列表"))
 s.addremove = true
@@ -8,23 +8,27 @@ s.anonymous = false
 s.template = "cbi/tblsection"
 
 -- 选择设备
-local device = s:option(ListValue, "device", translate("目标设备"),
-	translate("选择需要限速的设备"))
+local device = s:option(ListValue, "device", translate("设备"),
+	translate("选择目标设备"))
 device.rmempty = false
-device.width = "15%"
+device.width = "18%"
 
 local uci = require "luci.model.uci".cursor()
 uci:foreach("device_qos", "device", function(e)
 	if e.enabled == "1" then
-		device:value(e[".name"], e.name or e[".name"])
+		local display_name = e.name or e[".name"]
+		if e.ip then
+			display_name = display_name .. " (" .. e.ip .. ")"
+		end
+		device:value(e[".name"], display_name)
 	end
 end)
 
 -- 选择应用
 local app = s:option(ListValue, "app", translate("应用"),
-	translate("选择需要限速的应用"))
+	translate("选择目标应用"))
 app.rmempty = false
-app.width = "15%"
+app.width = "18%"
 
 uci:foreach("device_qos", "app", function(e)
 	if e.enabled == "1" then
@@ -34,31 +38,31 @@ end)
 
 -- 上行保证带宽
 local ur = s:option(Value, "up_rate", translate("上行保证"),
-	translate("最小保证上传带宽，例如：512kbit, 1mbit"))
+	translate("最小保证上传带宽"))
 ur.rmempty = false
 ur.placeholder = "512kbit"
-ur.width = "12%"
+ur.width = "14%"
 
 -- 上行最大带宽
 local uc = s:option(Value, "up_ceil", translate("上行上限"),
-	translate("最大上传带宽，例如：1mbit, 2mbit"))
+	translate("最大上传带宽"))
 uc.rmempty = false
 uc.placeholder = "1mbit"
-uc.width = "12%"
+uc.width = "14%"
 
 -- 下行保证带宽
 local dr = s:option(Value, "down_rate", translate("下行保证"),
-	translate("最小保证下载带宽，例如：2mbit, 5mbit"))
+	translate("最小保证下载带宽"))
 dr.rmempty = false
 dr.placeholder = "2mbit"
-dr.width = "12%"
+dr.width = "14%"
 
 -- 下行最大带宽
 local dc = s:option(Value, "down_ceil", translate("下行上限"),
-	translate("最大下载带宽，例如：5mbit, 10mbit"))
+	translate("最大下载带宽"))
 dc.rmempty = false
 dc.placeholder = "5mbit"
-dc.width = "12%"
+dc.width = "14%"
 
 -- 带宽单位验证函数
 local function validate_bandwidth(value)
