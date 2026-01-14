@@ -3,11 +3,30 @@ local util = require "luci.util"
 local sys = require "luci.sys"
 local fs = require "nixio.fs"
 
--- Service Status
-local running = (sys.call("ps | grep -v grep | grep device-qos >/dev/null") == 0)
-local status_text = running and translate("运行中") or translate("已停止")
-local status_color = running and "#46a546" or "#d9534f"
-local status_icon = running and "✓" or "✗"
+-- Service Status - 检查 nftables 表是否存在（更准确的判断方式）
+local running = (sys.call("nft list table inet device_qos >/dev/null 2>&1") == 0)
+-- 同时检查配置中的启用状态
+local uci = require "luci.model.uci".cursor()
+local enabled = uci:get("device_qos", "global", "enabled") or "0"
+local config_enabled = (enabled == "1")
+
+-- 如果配置未启用，则显示未启用；如果配置启用但表不存在，则显示未运行
+local status_text
+local status_color
+local status_icon
+if not config_enabled then
+	status_text = translate("未启用")
+	status_color = "#999"
+	status_icon = "○"
+elseif running then
+	status_text = translate("运行中")
+	status_color = "#46a546"
+	status_icon = "✓"
+else
+	status_text = translate("已停止")
+	status_color = "#d9534f"
+	status_icon = "✗"
+end
 
 -- Last Update Time
 local conf_file = "/etc/dnsmasq.d/device-qos.conf"
@@ -21,7 +40,6 @@ end
 local firewall_mode = "NFTables"
 
 -- Get statistics if available
-local uci = require "luci.model.uci".cursor()
 local app_count = 0
 local device_count = 0
 local limit_count = 0
@@ -82,4 +100,72 @@ end)
 			</tr>
 		</table>
 	</div>
+
+	<!-- Service Control Buttons -->
+	<div class="cbi-section-node" style="margin-top: 15px;">
+		<div class="cbi-value">
+			<div class="cbi-value-field" style="padding-left: 0;">
+				<% if config_enabled then %>
+					<input class="cbi-button cbi-button-apply" type="button"
+						value="<%:重启服务%>"
+						onclick="restartService()"
+						style="font-size: 14px; padding: 8px 20px; margin-right: 10px;"
+					/>
+					<input class="cbi-button cbi-button-reset" type="button"
+						value="<%:停止服务%>"
+						onclick="stopService()"
+						style="font-size: 14px; padding: 8px 20px;"
+					/>
+				<% else %>
+					<input class="cbi-button cbi-button-apply" type="button"
+						value="<%:启动服务%>"
+						onclick="startService()"
+						style="font-size: 14px; padding: 8px 20px;"
+					/>
+				<% end %>
+				<span style="margin-left: 15px; color: #666; font-size: 12px;">
+					<img src="<%=resource%>/cbi/help.gif" alt="help" style="vertical-align: middle; margin-right: 5px;" />
+					<%:重启服务将清除现有规则并重新加载配置，可解决重复规则问题%>
+				</span>
+			</div>
+		</div>
+	</div>
+
+	<script type="text/javascript">
+		function serviceControl(cmd) {
+			var xhr = new XMLHttpRequest();
+			xhr.open('POST', '<%=luci.dispatcher.build_url("admin", "network", "device_qos", "service")%>', true);
+			xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+			xhr.onload = function() {
+				if (xhr.status === 200) {
+					var result = JSON.parse(xhr.responseText);
+					if (result.success) {
+						alert('操作成功，正在刷新页面...');
+						window.location.reload();
+					} else {
+						alert('操作失败，请检查日志');
+					}
+				}
+			};
+			xhr.send('cmd=' + cmd);
+		}
+
+		function startService() {
+			if (confirm('确定要启动服务吗？')) {
+				serviceControl('start');
+			}
+		}
+
+		function stopService() {
+			if (confirm('确定要停止服务吗？')) {
+				serviceControl('stop');
+			}
+		}
+
+		function restartService() {
+			if (confirm('确定要重启服务吗？这将清除现有规则并重新加载配置。')) {
+				serviceControl('restart');
+			}
+		}
+	</script>
 </div>
