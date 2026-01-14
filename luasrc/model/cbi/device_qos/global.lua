@@ -2,6 +2,21 @@
 local m = Map("device_qos", translate("全局设置"),
 	translate("配置设备应用限速的基本参数和服务状态"))
 
+-- 添加提交后的处理函数
+m.on_after_commit = function(self)
+	local sys = require "luci.sys"
+	local uci = require "luci.model.uci".cursor()
+	local enabled = uci:get("device_qos", "global", "enabled") or "0"
+
+	if enabled == "1" then
+		-- 启用服务时，重启以应用新配置
+		sys.call("/etc/init.d/device-qos restart >/dev/null 2>&1")
+	else
+		-- 禁用服务时，停止服务
+		sys.call("/etc/init.d/device-qos stop >/dev/null 2>&1")
+	end
+end
+
 -- 服务状态面板
 local status_section = m:section(SimpleSection, nil, translate("服务状态"))
 status_section.template = "device_qos/status"

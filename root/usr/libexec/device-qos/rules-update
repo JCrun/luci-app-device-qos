@@ -53,21 +53,33 @@ process_clash_provider() {
 
 	# Parse Domains -> dnsmasq (nftset ip4 & ip6)
 	# Strict match: DOMAIN or DOMAIN-SUFFIX
-	# Strip comments and whitespace
-	local domain_list=$(grep -E '^\s*-\s*(DOMAIN|DOMAIN-SUFFIX),' "$tmp_file" | awk -F',' '{print $2}' | awk -F'#' '{print $1}' | tr -d '[:space:]')
+	# Strip comments, whitespace, and quotes
+	local domain_list=$(grep -E '^\s*-\s*(DOMAIN|DOMAIN-SUFFIX),' "$tmp_file" | awk -F',' '{print $2}' | awk -F'#' '{print $1}' | tr -d "[:space:]'\"")
 
 	if [ -n "$domain_list" ]; then
 		local new_domains=0
 		for domain in $domain_list; do
-			if ! grep -q "/${domain}/" "$DNSMASQ_CONF"; then
+			# Skip empty domains
+			[ -z "$domain" ] && continue
+
+			# Check if this exact rule already exists in dnsmasq.conf
+			if ! grep -qF "nftset=/${domain}/4#inet#${NFT_TABLE}#${set_ip4}" "$DNSMASQ_CONF"; then
 				# V1.2: Add both IPv4 and IPv6 nftset directives
 				echo "nftset=/${domain}/4#inet#${NFT_TABLE}#${set_ip4}" >> "$DNSMASQ_CONF"
 				echo "nftset=/${domain}/6#inet#${NFT_TABLE}#${set_ip6}" >> "$DNSMASQ_CONF"
 				new_domains=$((new_domains + 1))
 			fi
 
-			# Write back to UCI app domains list
-			if ! uci -q get "$CFG.$appname.domains" | grep -qw "$domain"; then
+			# Write back to UCI app domains list (check if already exists)
+			local domain_exists=0
+			for existing_domain in $(uci -q get "$CFG.$appname.domains" 2>/dev/null); do
+				if [ "$existing_domain" = "$domain" ]; then
+					domain_exists=1
+					break
+				fi
+			done
+
+			if [ "$domain_exists" -eq 0 ]; then
 				uci add_list "$CFG.$appname.domains=$domain"
 			fi
 		done
@@ -128,9 +140,9 @@ main() {
 	done
 	
 	if [ "$needs_reload" = "1" ]; then
-		log_info "Rules updated, restarting device-qos service to apply changes..."
-		/etc/init.d/device-qos reload >/dev/null 2>&1
-		log_info "Service reloaded successfully."
+		log_info "Rules updated, reloading dnsmasq to apply changes..."
+		/etc/init.d/dnsmasq restart >/dev/null 2>&1
+		log_info "Dnsmasq reloaded successfully."
 	fi
 }
 
