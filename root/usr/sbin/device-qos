@@ -146,33 +146,34 @@ build_ipsets_and_dnsmasq() {
 # 设置 nftables 规则
 nftables_setup() {
 	log_info "Setting up nftables rules..."
-	
+
 	nft add table inet "$NFT_TABLE"
 	# 1. 先 flush 表，清除旧规则
 	nft flush table inet "$NFT_TABLE"
-	
+
 	# 2. 创建链
 	# forward 链：优先级 -150，在 mangle 之前
 	nft add chain inet "$NFT_TABLE" forward { type filter hook forward priority -150 \; }
-	
+
 	# 3. 恢复 ct mark
 	nft add rule inet "$NFT_TABLE" forward ct mark != 0 meta mark set ct mark
 
 	local limit_list=$(uci show "$CFG" | grep "=device_limit$" | cut -d. -f2 | cut -d= -f1)
 	local limit_idx=0
-	
+	local rules_added=0
+
 	for limitname in $limit_list; do
 		local limitsec="$CFG.$limitname"
 		local dev_name=$(uci -q get "$limitsec.device")
 		local app_name=$(uci -q get "$limitsec.app")
-		
+
 		# 校验启用状态
 		[ "$(uci -q get "$CFG.$dev_name.enabled" || echo "0")" != "1" ] && { limit_idx=$((limit_idx+1)); continue; }
 		[ "$(uci -q get "$CFG.$app_name.enabled" || echo "0")" != "1" ] && { limit_idx=$((limit_idx+1)); continue; }
 
 		local dev_ip=$(uci -q get "$CFG.$dev_name.ip")
 		local mark=$(( $(uci -q get "$CFG.$app_name.fwmark_base") + limit_idx ))
-		
+
 		local set_ip4="app_${app_name}_ip4"
 		local set_net4="app_${app_name}_net4"
 		local set_ip6="app_${app_name}_ip6"
@@ -184,7 +185,7 @@ nftables_setup() {
 			counter meta mark set "$mark" ct mark set "$mark"
 		nft add rule inet "$NFT_TABLE" forward ct mark 0 meta nfproto ipv4 ip saddr "$dev_ip" ip daddr "@$set_net4" \
 			counter meta mark set "$mark" ct mark set "$mark"
-			
+
 		# 下行 (App -> Dev)
 		nft add rule inet "$NFT_TABLE" forward ct mark 0 meta nfproto ipv4 ip daddr "$dev_ip" ip saddr "@$set_ip4" \
 			counter meta mark set "$mark" ct mark set "$mark"
@@ -200,8 +201,15 @@ nftables_setup() {
 		# 现阶段仅添加集合 infrastructure。
 
 		log_info "Marking rules for $dev_name -> $app_name (Mark: $mark)"
+		rules_added=$((rules_added + 1))
 		limit_idx=$((limit_idx + 1))
 	done
+
+	if [ "$rules_added" -eq 0 ]; then
+		log_error "Warning: No nftables rules were added. Check if apps and devices are enabled."
+	else
+		log_info "Added $rules_added nftables marking rules."
+	fi
 }
 
 # 带宽单位转换为 kbit
@@ -216,23 +224,38 @@ tc_setup() {
 	tc qdisc del dev "$wan_if" root 2>/dev/null
 	tc qdisc del dev "$lan_if" root 2>/dev/null
 
-	tc qdisc add dev "$wan_if" root handle 1: htb default 9999
+	# Calculate r2q to avoid quantum warnings
+	# quantum = rate / r2q, we want quantum between 1000-60000
+	# For high bandwidth, increase r2q
+	local r2q_up=10
+	local r2q_down=10
+
+	# If rate > 600Mbit, use larger r2q to keep quantum reasonable
+	if [ $up_total -gt 614400 ]; then
+		r2q_up=100
+	fi
+	if [ $down_total -gt 614400 ]; then
+		r2q_down=100
+	fi
+
+	tc qdisc add dev "$wan_if" root handle 1: htb default 9999 r2q $r2q_up
 	tc class add dev "$wan_if" parent 1: classid 1:1 htb rate "${up_total}kbit" ceil "${up_total}kbit"
 	tc class add dev "$wan_if" parent 1:1 classid 1:9999 htb rate 1kbit ceil "${up_total}kbit"
 
-	tc qdisc add dev "$lan_if" root handle 2: htb default 9999
+	tc qdisc add dev "$lan_if" root handle 2: htb default 9999 r2q $r2q_down
 	tc class add dev "$lan_if" parent 2: classid 2:1 htb rate "${down_total}kbit" ceil "${down_total}kbit"
 	tc class add dev "$lan_if" parent 2:1 classid 2:9999 htb rate 1kbit ceil "${down_total}kbit"
 
 	local class_id=10
 	local limit_idx=0
+	local classes_added=0
 	local limit_list=$(uci show "$CFG" | grep "=device_limit$" | cut -d. -f2 | cut -d= -f1)
 
 	for limitname in $limit_list; do
 		local limitsec="$CFG.$limitname"
 		if [ "$(uci -q get "$CFG.$(uci -q get "$limitsec.device").enabled")" = "1" ] && \
 		   [ "$(uci -q get "$CFG.$(uci -q get "$limitsec.app").enabled")" = "1" ]; then
-			
+
 			local mark=$(( $(uci -q get "$CFG.$(uci -q get "$limitsec.app").fwmark_base") + limit_idx ))
 			local up_rate=$(uci -q get "$limitsec.up_rate" || echo "1mbit")
 			local up_ceil=$(uci -q get "$limitsec.up_ceil" || echo "1mbit")
@@ -245,28 +268,58 @@ tc_setup() {
 			tc class add dev "$lan_if" parent 2:1 classid 2:$class_id htb rate "$down_rate" ceil "$down_ceil"
 			tc filter add dev "$lan_if" parent 2: protocol ip prio 1 handle "$mark" fw flowid 2:$class_id
 
+			log_info "TC class $class_id: up=$up_rate/$up_ceil down=$down_rate/$down_ceil mark=$mark"
 			class_id=$((class_id + 1))
+			classes_added=$((classes_added + 1))
 		fi
 		limit_idx=$((limit_idx + 1))
 	done
+
+	if [ "$classes_added" -eq 0 ]; then
+		log_error "Warning: No tc classes were added. Check if device limits are configured and enabled."
+	else
+		log_info "Added $classes_added tc classes for traffic shaping."
+	fi
 }
 
 do_start() {
 	log_info "Starting Device-QoS Service (V1)..."
-	read_global || exit 1
-	[ "$enabled" != "1" ] && exit 0
-	
+
+	if ! read_global; then
+		log_error "Failed to read global config or verify interfaces"
+		exit 1
+	fi
+
+	if [ "$enabled" != "1" ]; then
+		log_info "Service is disabled in config, exiting."
+		exit 0
+	fi
+
+	# Check if we have any apps configured
+	local app_count=$(uci show "$CFG" 2>/dev/null | grep -c "=app$")
+	if [ "$app_count" -eq 0 ]; then
+		log_error "No applications configured. Please add apps in 'Application Management'."
+		exit 1
+	fi
+
+	# Check if we have any device limits configured
+	local limit_count=$(uci show "$CFG" 2>/dev/null | grep -c "=device_limit$")
+	if [ "$limit_count" -eq 0 ]; then
+		log_error "No device_limit rules configured. Please add at least one limit rule."
+		exit 1
+	fi
+
 	disable_flow_offloading
 	build_ipsets_and_dnsmasq
 	nftables_setup
 	tc_setup
-	
+
 	# 调用规则更新器 (V1)
 	if [ -x "$RULES_UPDATE_CMD" ]; then
 		log_info "Invoking rules-update..."
 		"$RULES_UPDATE_CMD"
 	fi
-	
+
 	log_info "Service started."
 }
 

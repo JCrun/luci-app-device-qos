@@ -25,14 +25,44 @@ ensure_dir() {
 download_file() {
 	local url="$1"
 	local out="$2"
+	local ret=0
+
+	# Try curl first
 	if command -v curl >/dev/null 2>&1; then
-		curl -sL --retry 3 --connect-timeout 10 "$url" -o "$out"
+		log_info "Downloading with curl: $url"
+		curl -sL --retry 3 --connect-timeout 10 --max-time 60 "$url" -o "$out"
+		ret=$?
+		if [ $ret -ne 0 ]; then
+			log_error "curl failed with code $ret for $url"
+			# Try to provide more context
+			if [ $ret -eq 7 ]; then
+				log_error "Connection failed. Check network connectivity and DNS."
+			elif [ $ret -eq 6 ]; then
+				log_error "DNS resolution failed for $(echo "$url" | cut -d/ -f3)"
+			fi
+			return 1
+		fi
+	# Fallback to wget
 	elif command -v wget >/dev/null 2>&1; then
-		wget -q --no-check-certificate -T 10 "$url" -O "$out"
+		log_info "Downloading with wget: $url"
+		wget -q --no-check-certificate -T 10 --timeout=60 "$url" -O "$out"
+		ret=$?
+		if [ $ret -ne 0 ]; then
+			log_error "wget failed with code $ret for $url"
+			return 1
+		fi
 	else
 		log_error "No curl or wget found"
 		return 1
 	fi
+
+	# Verify file was downloaded and has content
+	if [ ! -s "$out" ]; then
+		log_error "Downloaded file is empty or doesn't exist: $out"
+		return 1
+	fi
+
+	return 0
 }
 
 process_clash_provider() {

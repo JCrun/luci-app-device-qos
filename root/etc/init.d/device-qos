@@ -2,12 +2,15 @@
 START=96
 STOP=10
 USE_PROCD=0
+
 start() {
- /usr/sbin/device-qos start
+	/usr/sbin/device-qos start
 }
+
 stop() {
- /usr/sbin/device-qos stop
+	/usr/sbin/device-qos stop
 }
+
 reload() {
- /usr/sbin/device-qos reload
+	/usr/sbin/device-qos reload
 }
