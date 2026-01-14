@@ -39,32 +39,46 @@ process_clash_provider() {
 	local name="$1"
 	local url="$2"
 	local appname="$3"
-	
+
 	local tmp_file="/tmp/clash_${name}.yaml"
 	local set_ip4="app_${appname}_ip4"
 	local set_net4="app_${appname}_net4"
-	
+
 	log_info "Processing provider $name ($appname)..."
-	
+
 	if ! download_file "$url" "$tmp_file"; then
 		log_error "Failed to download $url"
 		return 1
 	fi
-	
+
 	# Parse Domains -> dnsmasq (nftset ip4 & ip6)
 	# Strict match: DOMAIN or DOMAIN-SUFFIX
 	# Strip comments and whitespace
 	local domain_list=$(grep -E '^\s*-\s*(DOMAIN|DOMAIN-SUFFIX),' "$tmp_file" | awk -F',' '{print $2}' | awk -F'#' '{print $1}' | tr -d '[:space:]')
-	
+
 	if [ -n "$domain_list" ]; then
+		local new_domains=0
 		for domain in $domain_list; do
 			if ! grep -q "/${domain}/" "$DNSMASQ_CONF"; then
 				# V1.2: Add both IPv4 and IPv6 nftset directives
 				echo "nftset=/${domain}/4#inet#${NFT_TABLE}#${set_ip4}" >> "$DNSMASQ_CONF"
 				echo "nftset=/${domain}/6#inet#${NFT_TABLE}#${set_ip6}" >> "$DNSMASQ_CONF"
+				new_domains=$((new_domains + 1))
+			fi
+
+			# Write back to UCI app domains list
+			if ! uci -q get "$CFG.$appname.domains" | grep -qw "$domain"; then
+				uci add_list "$CFG.$appname.domains=$domain"
 			fi
 		done
-		log_info "Integrated domains from $name"
+
+		# Commit changes if new domains were added
+		if [ "$new_domains" -gt 0 ]; then
+			uci commit "$CFG"
+			log_info "Integrated $new_domains new domains from $name to app $appname"
+		else
+			log_info "No new domains from $name (all already integrated)"
+		fi
 	fi
 	
 	# Parse IP-CIDR -> nftables (set net4)
@@ -114,8 +128,9 @@ main() {
 	done
 	
 	if [ "$needs_reload" = "1" ]; then
-		/etc/init.d/dnsmasq restart >/dev/null 2>&1
-		log_info "Rules updated and services reloaded."
+		log_info "Rules updated, restarting device-qos service to apply changes..."
+		/etc/init.d/device-qos reload >/dev/null 2>&1
+		log_info "Service reloaded successfully."
 	fi
 }
 

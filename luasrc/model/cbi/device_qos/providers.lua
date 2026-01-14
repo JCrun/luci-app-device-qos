@@ -4,8 +4,7 @@ local m = Map("device_qos", translate("规则源配置"),
 
 -- 添加说明信息
 local info = m:section(SimpleSection, nil, translate("说明"))
-info.template = "cbi/tvalue"
-info.description = translate("规则源可以从外部URL自动下载域名和IP规则，并合并到对应应用中。点击"立即更新规则"按钮可手动触发更新。")
+info.description = translate("规则源可以从外部URL自动下载域名和IP规则，并合并到对应应用中。点击'立即更新规则'按钮可手动触发更新。")
 
 -- 规则源列表
 local s = m:section(TypedSection, "provider", translate("规则源列表"))
