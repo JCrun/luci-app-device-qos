@@ -15,22 +15,22 @@ local status_text
 local status_color
 local status_icon
 if not config_enabled then
-	status_text = translate("未启用")
+	status_text = translate("Disabled")
 	status_color = "#999"
 	status_icon = "○"
 elseif running then
-	status_text = translate("运行中")
+	status_text = translate("Running")
 	status_color = "#46a546"
 	status_icon = "✓"
 else
-	status_text = translate("已停止")
+	status_text = translate("Stopped")
 	status_color = "#d9534f"
 	status_icon = "✗"
 end
 
 -- Last Update Time
 local conf_file = "/etc/dnsmasq.d/device-qos.conf"
-local last_update = translate("从未更新")
+local last_update = translate("Never updated")
 local stat = fs.stat(conf_file)
 if stat then
 	last_update = os.date("%Y-%m-%d %H:%M:%S", stat.mtime)
@@ -60,14 +60,14 @@ end)
 <div class="cbi-section" style="background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; padding: 15px; margin-bottom: 20px;">
 	<div class="cbi-section-descr" style="margin-bottom: 15px;">
 		<h3 style="margin: 0 0 10px 0; font-size: 16px; color: #333;">
-			<%:服务状态%>
+			<%:Service Status%>
 		</h3>
 	</div>
 	<div class="cbi-section-node">
 		<table class="table" style="margin: 0;">
 			<tr>
 				<td style="width: 30%; padding: 8px; border-bottom: 1px solid #eee;">
-					<strong><%:服务状态%></strong>
+					<strong><%:Service Status%></strong>
 				</td>
 				<td style="padding: 8px; border-bottom: 1px solid #eee;">
 					<span style="color: <%=status_color%>; font-weight: bold; font-size: 14px;">
@@ -80,7 +80,7 @@ end)
 			</tr>
 			<tr>
 				<td style="width: 30%; padding: 8px; border-bottom: 1px solid #eee;">
-					<strong><%:最后更新%></strong>
+					<strong><%:Last Update%></strong>
 				</td>
 				<td style="padding: 8px; border-bottom: 1px solid #eee;">
 					<%=last_update%>
@@ -88,13 +88,13 @@ end)
 			</tr>
 			<tr>
 				<td style="width: 30%; padding: 8px;">
-					<strong><%:配置统计%></strong>
+					<strong><%:Configuration Statistics%></strong>
 				</td>
 				<td style="padding: 8px;">
 					<span style="color: #666;">
-						<%:应用%>: <%=app_count%> | 
-						<%:设备%>: <%=device_count%> | 
-						<%:规则%>: <%=limit_count%>
+						<%:Apps%>: <%=app_count%> | 
+						<%:Devices%>: <%=device_count%> | 
+						<%:Rules%>: <%=limit_count%>
 					</span>
 				</td>
 			</tr>
@@ -107,25 +107,25 @@ end)
 			<div class="cbi-value-field" style="padding-left: 0;">
 				<% if config_enabled then %>
 					<input class="cbi-button cbi-button-apply" type="button"
-						value="<%:重启服务%>"
+						value="<%:Restart Service%>"
 						onclick="restartService()"
 						style="font-size: 14px; padding: 8px 20px; margin-right: 10px;"
 					/>
 					<input class="cbi-button cbi-button-reset" type="button"
-						value="<%:停止服务%>"
+						value="<%:Stop Service%>"
 						onclick="stopService()"
 						style="font-size: 14px; padding: 8px 20px;"
 					/>
 				<% else %>
 					<input class="cbi-button cbi-button-apply" type="button"
-						value="<%:启动服务%>"
+						value="<%:Start Service%>"
 						onclick="startService()"
 						style="font-size: 14px; padding: 8px 20px;"
 					/>
 				<% end %>
 				<span style="margin-left: 15px; color: #666; font-size: 12px;">
 					<img src="<%=resource%>/cbi/help.gif" alt="help" style="vertical-align: middle; margin-right: 5px;" />
-					<%:重启服务将清除现有规则并重新加载配置，可解决重复规则问题%>
+					<%:Restarting service will clear existing rules and reload configuration, can fix duplicate rules issue%>
 				</span>
 			</div>
 		</div>
@@ -140,10 +140,10 @@ end)
 				if (xhr.status === 200) {
 					var result = JSON.parse(xhr.responseText);
 					if (result.success) {
-						alert('操作成功，正在刷新页面...');
+						alert('Operation successful, refreshing page...');
 						window.location.reload();
 					} else {
-						alert('操作失败，请检查日志');
+						alert('Operation failed, please check logs');
 					}
 				}
 			};
@@ -151,19 +151,19 @@ end)
 		}
 
 		function startService() {
-			if (confirm('确定要启动服务吗？')) {
+			if (confirm('Are you sure you want to start the service?')) {
 				serviceControl('start');
 			}
 		}
 
 		function stopService() {
-			if (confirm('确定要停止服务吗？')) {
+			if (confirm('Are you sure you want to stop the service?')) {
 				serviceControl('stop');
 			}
 		}
 
 		function restartService() {
-			if (confirm('确定要重启服务吗？这将清除现有规则并重新加载配置。')) {
+			if (confirm('Are you sure you want to restart the service? This will clear existing rules and reload configuration.')) {
 				serviceControl('restart');
 			}
 		}

@@ -1,0 +1,287 @@
+# Device Application QoS LuCI Application
+# Copyright (C) 2024
+# This file is distributed under the same license as the luci-app-device-qos package.
+#
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Device App QoS"
+msgstr ""
+
+msgid "Global Settings"
+msgstr ""
+
+msgid "App Management"
+msgstr ""
+
+msgid "Rule Sources"
+msgstr ""
+
+msgid "Device Management"
+msgstr ""
+
+msgid "Rate Limits"
+msgstr ""
+
+msgid "Service Control"
+msgstr ""
+
+msgid "Configure basic parameters and service status for device app QoS"
+msgstr ""
+
+msgid "Service Status"
+msgstr ""
+
+msgid "Basic Configuration"
+msgstr ""
+
+msgid "Enable Service"
+msgstr ""
+
+msgid "Enable or disable the entire app traffic QoS service. When disabled, all rate limit rules will not take effect."
+msgstr ""
+
+msgid "Network Interface Configuration"
+msgstr ""
+
+msgid "Configure network interfaces for traffic identification"
+msgstr ""
+
+msgid "WAN Interface"
+msgstr ""
+
+msgid "Interface name for internet connection, usually wan, eth1 or pppoe-wan"
+msgstr ""
+
+msgid "LAN Interface"
+msgstr ""
+
+msgid "Interface name for LAN connection, usually lan or br-lan"
+msgstr ""
+
+msgid "Bandwidth Configuration"
+msgstr ""
+
+msgid "Configure total bandwidth, recommend setting to 90-95% of actual bandwidth to avoid ISP queuing delay"
+msgstr ""
+
+msgid "Total Upload Bandwidth"
+msgstr ""
+
+msgid "Actual upload bandwidth provided by your ISP (Mbps)"
+msgstr ""
+
+msgid "Total Download Bandwidth"
+msgstr ""
+
+msgid "Actual download bandwidth provided by your ISP (Mbps)"
+msgstr ""
+
+msgid "Define applications to rate limit and their domain lists. Applications are identified by domains, multiple domains supported."
+msgstr ""
+
+msgid "Application List"
+msgstr ""
+
+msgid "Enable"
+msgstr ""
+
+msgid "App Name"
+msgstr ""
+
+msgid "User-friendly application name, e.g.: TikTok, Bilibili"
+msgstr ""
+
+msgid "Description"
+msgstr ""
+
+msgid "Optional application description or notes"
+msgstr ""
+
+msgid "Mark Value"
+msgstr ""
+
+msgid "Firewall mark base value for kernel identification. Recommended: 1000, 2000, 3000..."
+msgstr ""
+
+msgid "Domain List"
+msgstr ""
+
+msgid "Domains related to this application, one per line. e.g.: douyin.com, bytecdn.cn"
+msgstr ""
+
+msgid "At least one domain is required"
+msgstr ""
+
+msgid "Fwmark base value cannot be empty"
+msgstr ""
+
+msgid "Fwmark base value must be at least 100"
+msgstr ""
+
+msgid "Fwmark base value conflicts with another app"
+msgstr ""
+
+msgid "Configure LAN devices that need app rate limiting. Devices must use static IP addresses."
+msgstr ""
+
+msgid "Device List"
+msgstr ""
+
+msgid "Device Name"
+msgstr ""
+
+msgid "Easy-to-identify device name, e.g.: John's Phone, Living Room TV"
+msgstr ""
+
+msgid "Optional device description or model"
+msgstr ""
+
+msgid "IP Address"
+msgstr ""
+
+msgid "Device's static IP address. Recommend configuring in Network → DHCP/DNS → Static Leases"
+msgstr ""
+
+msgid "IP address cannot be empty"
+msgstr ""
+
+msgid "Invalid IPv4 address format"
+msgstr ""
+
+msgid "IP address conflicts with another device"
+msgstr ""
+
+msgid "Configure upload and download bandwidth limits for specific apps on specific devices. Rate (guaranteed) is minimum guaranteed bandwidth, Ceil (ceiling) is maximum bandwidth."
+msgstr ""
+
+msgid "Rate Limit Rules"
+msgstr ""
+
+msgid "Device"
+msgstr ""
+
+msgid "Select target device"
+msgstr ""
+
+msgid "Application"
+msgstr ""
+
+msgid "Select target application"
+msgstr ""
+
+msgid "Upload Rate"
+msgstr ""
+
+msgid "Minimum guaranteed upload bandwidth"
+msgstr ""
+
+msgid "Upload Ceil"
+msgstr ""
+
+msgid "Maximum upload bandwidth"
+msgstr ""
+
+msgid "Download Rate"
+msgstr ""
+
+msgid "Minimum guaranteed download bandwidth"
+msgstr ""
+
+msgid "Download Ceil"
+msgstr ""
+
+msgid "Maximum download bandwidth"
+msgstr ""
+
+msgid "Bandwidth value cannot be empty"
+msgstr ""
+
+msgid "Invalid bandwidth format, e.g.: 512kbit, 1mbit, 100mbps"
+msgstr ""
+
+msgid "Must select a device"
+msgstr ""
+
+msgid "This device already has a rate limit rule for this app"
+msgstr ""
+
+msgid "Configure external rule subscription sources (e.g. Clash Rule Set) for automatic rule updates. Supports downloading rules from URL and applying to corresponding apps."
+msgstr ""
+
+msgid "Rule sources can automatically download domain and IP rules from external URLs and merge them into corresponding apps. Click 'Update Rules Now' button to manually trigger update."
+msgstr ""
+
+msgid "Rule Source List"
+msgstr ""
+
+msgid "Type"
+msgstr ""
+
+msgid "Associated App"
+msgstr ""
+
+msgid "Bind downloaded rules to which application"
+msgstr ""
+
+msgid "Rule URL"
+msgstr ""
+
+msgid "Clash rule file download URL (supports HTTPS/jsdelivr)"
+msgstr ""
+
+msgid "URL cannot be empty"
+msgstr ""
+
+msgid "Must start with http:// or https://"
+msgstr ""
+
+msgid "Manual Update"
+msgstr ""
+
+msgid "Disabled"
+msgstr ""
+
+msgid "Running"
+msgstr ""
+
+msgid "Stopped"
+msgstr ""
+
+msgid "Never updated"
+msgstr ""
+
+msgid "Last Update"
+msgstr ""
+
+msgid "Configuration Statistics"
+msgstr ""
+
+msgid "Apps"
+msgstr ""
+
+msgid "Devices"
+msgstr ""
+
+msgid "Rules"
+msgstr ""
+
+msgid "Restart Service"
+msgstr ""
+
+msgid "Stop Service"
+msgstr ""
+
+msgid "Start Service"
+msgstr ""
+
+msgid "Restarting service will clear existing rules and reload configuration, can fix duplicate rules issue"
+msgstr ""
+
+msgid "Update Rules Now"
+msgstr ""
+
+msgid "Download latest rules from all enabled rule sources and reload service. This may take a few seconds."
+msgstr ""
