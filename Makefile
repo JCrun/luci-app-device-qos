@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-device-qos
 PKG_VERSION:=1.0.0
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 LUCI_TITLE:=Device Application QoS
 LUCI_DESCRIPTION:=Precise bandwidth control for specific applications on specific devices

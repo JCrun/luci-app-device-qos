@@ -5,13 +5,13 @@ local update_url = luci.dispatcher.build_url("admin", "network", "device_qos", "
     <div class="cbi-value" style="margin-bottom: 15px;">
         <div class="cbi-value-field" style="padding-left: 0;">
             <input class="cbi-button cbi-button-apply" type="button" 
-                value="<%:立即更新规则%>"
+                value="<%:Update Rules Now%>"
                 onclick="location.href='<%=update_url%>'"
                 style="font-size: 14px; padding: 8px 20px;"
             />
             <span style="margin-left: 15px; color: #666; font-size: 12px;">
                 <img src="<%=resource%>/cbi/help.gif" alt="help" style="vertical-align: middle; margin-right: 5px;" />
-                <%:从所有启用的规则源下载最新规则并重新加载服务。这可能需要几秒钟时间。%>
+                <%:Download latest rules from all enabled rule sources and reload service. This may take a few seconds.%>
             </span>
         </div>
     </div>

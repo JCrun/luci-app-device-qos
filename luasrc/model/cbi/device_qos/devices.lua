@@ -1,52 +1,52 @@
--- 设备应用限速 - 设备管理
-local m = Map("device_qos", translate("设备管理"),
-	translate("配置需要进行应用限速的局域网设备。设备必须使用固定IP地址。"))
+-- Device App QoS - Device Management
+local m = Map("device_qos", translate("Device Management"),
+	translate("Configure LAN devices that need app rate limiting. Devices must use static IP addresses."))
 
-local s = m:section(TypedSection, "device", translate("设备列表"))
+local s = m:section(TypedSection, "device", translate("Device List"))
 s.addremove = true
 s.anonymous = false
 s.template = "cbi/tblsection"
 
--- 启用/禁用单个设备
-local en = s:option(Flag, "enabled", translate("启用"))
+-- Enable/Disable individual device
+local en = s:option(Flag, "enabled", translate("Enable"))
 en.rmempty = false
 en.default = "1"
 en.width = "6%"
 
--- 设备名称（用户友好）
-local name = s:option(Value, "name", translate("设备名称"),
-	translate("易于识别的设备名称，例如：小明的手机、客厅电视"))
+-- Device Name (user-friendly)
+local name = s:option(Value, "name", translate("Device Name"),
+	translate("Easy-to-identify device name, e.g.: John's Phone, Living Room TV"))
 name.rmempty = false
-name.placeholder = "小明的手机"
+name.placeholder = "John's Phone"
 name.width = "25%"
 
--- 设备描述
-local desc = s:option(Value, "desc", translate("描述"),
-	translate("可选的设备描述或型号"))
-desc.placeholder = "设备型号或备注"
+-- Device Description
+local desc = s:option(Value, "desc", translate("Description"),
+	translate("Optional device description or model"))
+desc.placeholder = "Device model or notes"
 desc.width = "25%"
 
--- 设备IP地址
-local ip = s:option(Value, "ip", translate("IP 地址"),
-	translate("设备的固定IP地址。建议在 网络 → DHCP/DNS → 静态租约 中配置"))
+-- Device IP Address
+local ip = s:option(Value, "ip", translate("IP Address"),
+	translate("Device's static IP address. Recommend configuring in Network → DHCP/DNS → Static Leases"))
 ip.datatype = "ip4addr"
 ip.rmempty = false
 ip.placeholder = "192.168.1.100"
 ip.width = "18%"
 
--- 添加验证
+-- Add validation
 function ip.validate(self, value, section)
 	if not value or value == "" then
-		return nil, translate("IP 地址不能为空")
+		return nil, translate("IP address cannot be empty")
 	end
 
-	-- 检查IP地址格式
+	-- Check IP address format
 	local valid = require "luci.ip"
 	if not valid.IPv4(value) then
-		return nil, translate("无效的 IPv4 地址格式")
+		return nil, translate("Invalid IPv4 address format")
 	end
 
-	-- 检查是否与其他设备冲突
+	-- Check for conflicts with other devices
 	local uci = require "luci.model.uci".cursor()
 	local conflict = false
 	uci:foreach("device_qos", "device", function(s)
@@ -57,7 +57,7 @@ function ip.validate(self, value, section)
 	end)
 
 	if conflict then
-		return nil, translate("IP 地址与其他设备冲突")
+		return nil, translate("IP address conflicts with another device")
 	end
 
 	return value

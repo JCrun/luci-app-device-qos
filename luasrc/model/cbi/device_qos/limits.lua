@@ -1,15 +1,15 @@
--- 设备应用限速 - 限速规则配置
-local m = Map("device_qos", translate("限速规则"),
-	translate("为特定设备的特定应用配置上传和下载带宽限制。Rate（保证）为最小保证带宽，Ceil（上限）为最大带宽。"))
+-- Device App QoS - Rate Limit Rules
+local m = Map("device_qos", translate("Rate Limits"),
+	translate("Configure upload and download bandwidth limits for specific apps on specific devices. Rate (guaranteed) is minimum guaranteed bandwidth, Ceil (ceiling) is maximum bandwidth."))
 
-local s = m:section(TypedSection, "device_limit", translate("限速规则列表"))
+local s = m:section(TypedSection, "device_limit", translate("Rate Limit Rules"))
 s.addremove = true
 s.anonymous = false
 s.template = "cbi/tblsection"
 
--- 选择设备
-local device = s:option(ListValue, "device", translate("设备"),
-	translate("选择目标设备"))
+-- Select Device
+local device = s:option(ListValue, "device", translate("Device"),
+	translate("Select target device"))
 device.rmempty = false
 device.width = "18%"
 
@@ -24,9 +24,9 @@ uci:foreach("device_qos", "device", function(e)
 	end
 end)
 
--- 选择应用
-local app = s:option(ListValue, "app", translate("应用"),
-	translate("选择目标应用"))
+-- Select Application
+local app = s:option(ListValue, "app", translate("Application"),
+	translate("Select target application"))
 app.rmempty = false
 app.width = "18%"
 
@@ -36,44 +36,44 @@ uci:foreach("device_qos", "app", function(e)
 	end
 end)
 
--- 上行保证带宽
-local ur = s:option(Value, "up_rate", translate("上行保证"),
-	translate("最小保证上传带宽"))
+-- Upload Guaranteed Bandwidth
+local ur = s:option(Value, "up_rate", translate("Upload Rate"),
+	translate("Minimum guaranteed upload bandwidth"))
 ur.rmempty = false
 ur.placeholder = "512kbit"
 ur.width = "14%"
 
--- 上行最大带宽
-local uc = s:option(Value, "up_ceil", translate("上行上限"),
-	translate("最大上传带宽"))
+-- Upload Maximum Bandwidth
+local uc = s:option(Value, "up_ceil", translate("Upload Ceil"),
+	translate("Maximum upload bandwidth"))
 uc.rmempty = false
 uc.placeholder = "1mbit"
 uc.width = "14%"
 
--- 下行保证带宽
-local dr = s:option(Value, "down_rate", translate("下行保证"),
-	translate("最小保证下载带宽"))
+-- Download Guaranteed Bandwidth
+local dr = s:option(Value, "down_rate", translate("Download Rate"),
+	translate("Minimum guaranteed download bandwidth"))
 dr.rmempty = false
 dr.placeholder = "2mbit"
 dr.width = "14%"
 
--- 下行最大带宽
-local dc = s:option(Value, "down_ceil", translate("下行上限"),
-	translate("最大下载带宽"))
+-- Download Maximum Bandwidth
+local dc = s:option(Value, "down_ceil", translate("Download Ceil"),
+	translate("Maximum download bandwidth"))
 dc.rmempty = false
 dc.placeholder = "5mbit"
 dc.width = "14%"
 
--- 带宽单位验证函数
+-- Bandwidth unit validation function
 local function validate_bandwidth(value)
 	if not value or value == "" then
-		return false, translate("带宽值不能为空")
+		return false, translate("Bandwidth value cannot be empty")
 	end
 
-	-- 支持的单位：bit, kbit, mbit, gbit, kbps, mbps
+	-- Supported units: bit, kbit, mbit, gbit, kbps, mbps
 	local pattern = "^%d+%.?%d*[kmg]?bits?$"
 	if not value:lower():match(pattern) then
-		return false, translate("带宽格式错误，例如：512kbit, 1mbit, 100mbps")
+		return false, translate("Invalid bandwidth format, e.g.: 512kbit, 1mbit, 100mbps")
 	end
 
 	return true, nil
@@ -112,10 +112,10 @@ function dc.validate(self, value, section)
 	return value
 end
 
--- 检查设备和应用组合是否重复
+-- Check for duplicate device+app combinations
 function device.validate(self, value, section)
 	if not value or value == "" then
-		return nil, translate("必须选择一个设备")
+		return nil, translate("Must select a device")
 	end
 
 	-- 获取当前配置的应用
@@ -136,7 +136,7 @@ function device.validate(self, value, section)
 	end)
 
 	if conflict then
-		return nil, translate("该设备已配置此应用的限速规则")
+		return nil, translate("This device already has a rate limit rule for this app")
 	end
 
 	return value

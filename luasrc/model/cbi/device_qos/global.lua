@@ -1,6 +1,6 @@
--- 设备应用限速 - 全局设置
-local m = Map("device_qos", translate("全局设置"),
-	translate("配置设备应用限速的基本参数和服务状态"))
+-- Device App QoS - Global Settings
+local m = Map("device_qos", translate("Global Settings"),
+	translate("Configure basic parameters and service status for device app QoS"))
 
 -- 添加提交后的处理函数
 m.on_after_commit = function(self)
@@ -17,59 +17,59 @@ m.on_after_commit = function(self)
 	end
 end
 
--- 服务状态面板
-local status_section = m:section(SimpleSection, nil, translate("服务状态"))
+-- Service Status Panel
+local status_section = m:section(SimpleSection, nil, translate("Service Status"))
 status_section.template = "device_qos/status"
 
--- 基本配置区域
-local s = m:section(TypedSection, "global", translate("基本配置"))
+-- Basic Configuration
+local s = m:section(TypedSection, "global", translate("Basic Configuration"))
 s.anonymous = true
 s.addremove = false
 
-local enabled = s:option(Flag, "enabled", translate("启用服务"),
-	translate("启用或禁用整个应用流量QoS服务。关闭时所有限速规则将不生效。"))
+local enabled = s:option(Flag, "enabled", translate("Enable Service"),
+	translate("Enable or disable the entire app traffic QoS service. When disabled, all rate limit rules will not take effect."))
 enabled.rmempty = false
 enabled.default = "0"
 
--- 网络接口配置
-local iface_section = m:section(SimpleSection, nil, translate("网络接口配置"))
-iface_section.description = translate("配置用于流量识别的网络接口")
+-- Network Interface Configuration
+local iface_section = m:section(SimpleSection, nil, translate("Network Interface Configuration"))
+iface_section.description = translate("Configure network interfaces for traffic identification")
 
 local s_iface = m:section(TypedSection, "global", "")
 s_iface.anonymous = true
 s_iface.addremove = false
 
-local wan = s_iface:option(Value, "wan_if", translate("WAN 接口"),
-	translate("用于互联网连接的接口名称，通常为 wan、eth1 或 pppoe-wan"))
+local wan = s_iface:option(Value, "wan_if", translate("WAN Interface"),
+	translate("Interface name for internet connection, usually wan, eth1 or pppoe-wan"))
 wan.datatype = "string"
 wan.default = "wan"
 wan.placeholder = "wan"
 wan.size = 20
 
-local lan = s_iface:option(Value, "lan_if", translate("LAN 接口"),
-	translate("用于局域网连接的接口名称，通常为 lan 或 br-lan"))
+local lan = s_iface:option(Value, "lan_if", translate("LAN Interface"),
+	translate("Interface name for LAN connection, usually lan or br-lan"))
 lan.datatype = "string"
 lan.default = "lan"
 lan.placeholder = "br-lan"
 lan.size = 20
 
--- 带宽配置
-local bw_section = m:section(SimpleSection, nil, translate("带宽配置"))
-bw_section.description = translate("配置总带宽，建议设置为实际带宽的 90-95% 以避免ISP端排队延迟")
+-- Bandwidth Configuration
+local bw_section = m:section(SimpleSection, nil, translate("Bandwidth Configuration"))
+bw_section.description = translate("Configure total bandwidth, recommend setting to 90-95% of actual bandwidth to avoid ISP queuing delay")
 
 local s_bw = m:section(TypedSection, "global", "")
 s_bw.anonymous = true
 s_bw.addremove = false
 
-local up = s_bw:option(Value, "up_mbps", translate("总上传带宽"),
-	translate("您的ISP提供的实际上传带宽（Mbps）"))
+local up = s_bw:option(Value, "up_mbps", translate("Total Upload Bandwidth"),
+	translate("Actual upload bandwidth provided by your ISP (Mbps)"))
 up.datatype = "and(uinteger,min(1))"
 up.default = "100"
 up.placeholder = "100"
 up.size = 15
 
-local down = s_bw:option(Value, "down_mbps", translate("总下载带宽"),
-	translate("您的ISP提供的实际下载带宽（Mbps）"))
+local down = s_bw:option(Value, "down_mbps", translate("Total Download Bandwidth"),
+	translate("Actual download bandwidth provided by your ISP (Mbps)"))
 down.datatype = "and(uinteger,min(1))"
 down.default = "100"
 down.placeholder = "100"

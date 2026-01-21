@@ -1,0 +1,288 @@
+# Chinese (Simplified) translation for luci-app-device-qos
+# Copyright (C) 2024
+# This file is distributed under the same license as the luci-app-device-qos package.
+#
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: zh_Hans\n"
+
+msgid "Device App QoS"
+msgstr "设备应用限速"
+
+msgid "Global Settings"
+msgstr "全局设置"
+
+msgid "App Management"
+msgstr "应用管理"
+
+msgid "Rule Sources"
+msgstr "规则源"
+
+msgid "Device Management"
+msgstr "设备管理"
+
+msgid "Rate Limits"
+msgstr "限速规则"
+
+msgid "Service Control"
+msgstr "服务控制"
+
+msgid "Configure basic parameters and service status for device app QoS"
+msgstr "配置设备应用限速的基本参数和服务状态"
+
+msgid "Service Status"
+msgstr "服务状态"
+
+msgid "Basic Configuration"
+msgstr "基本配置"
+
+msgid "Enable Service"
+msgstr "启用服务"
+
+msgid "Enable or disable the entire app traffic QoS service. When disabled, all rate limit rules will not take effect."
+msgstr "启用或禁用整个应用流量QoS服务。关闭时所有限速规则将不生效。"
+
+msgid "Network Interface Configuration"
+msgstr "网络接口配置"
+
+msgid "Configure network interfaces for traffic identification"
+msgstr "配置用于流量识别的网络接口"
+
+msgid "WAN Interface"
+msgstr "WAN 接口"
+
+msgid "Interface name for internet connection, usually wan, eth1 or pppoe-wan"
+msgstr "用于互联网连接的接口名称，通常为 wan、eth1 或 pppoe-wan"
+
+msgid "LAN Interface"
+msgstr "LAN 接口"
+
+msgid "Interface name for LAN connection, usually lan or br-lan"
+msgstr "用于局域网连接的接口名称，通常为 lan 或 br-lan"
+
+msgid "Bandwidth Configuration"
+msgstr "带宽配置"
+
+msgid "Configure total bandwidth, recommend setting to 90-95% of actual bandwidth to avoid ISP queuing delay"
+msgstr "配置总带宽，建议设置为实际带宽的 90-95% 以避免ISP端排队延迟"
+
+msgid "Total Upload Bandwidth"
+msgstr "总上传带宽"
+
+msgid "Actual upload bandwidth provided by your ISP (Mbps)"
+msgstr "您的ISP提供的实际上传带宽（Mbps）"
+
+msgid "Total Download Bandwidth"
+msgstr "总下载带宽"
+
+msgid "Actual download bandwidth provided by your ISP (Mbps)"
+msgstr "您的ISP提供的实际下载带宽（Mbps）"
+
+msgid "Define applications to rate limit and their domain lists. Applications are identified by domains, multiple domains supported."
+msgstr "定义需要限速的应用及其域名列表。应用通过域名识别，支持多个域名。"
+
+msgid "Application List"
+msgstr "应用列表"
+
+msgid "Enable"
+msgstr "启用"
+
+msgid "App Name"
+msgstr "应用名称"
+
+msgid "User-friendly application name, e.g.: TikTok, Bilibili"
+msgstr "用户友好的应用名称，例如：抖音短视频、哔哩哔哩"
+
+msgid "Description"
+msgstr "描述"
+
+msgid "Optional application description or notes"
+msgstr "可选的应用描述或说明"
+
+msgid "Mark Value"
+msgstr "标记值"
+
+msgid "Firewall mark base value for kernel identification. Recommended: 1000, 2000, 3000..."
+msgstr "防火墙标记基准值，用于内核识别。建议：1000、2000、3000..."
+
+msgid "Domain List"
+msgstr "域名列表"
+
+msgid "Domains related to this application, one per line. e.g.: douyin.com, bytecdn.cn"
+msgstr "与该应用相关的域名，每行一个域名。例如：douyin.com、bytecdn.cn"
+
+msgid "At least one domain is required"
+msgstr "至少需要添加一个域名"
+
+msgid "Fwmark base value cannot be empty"
+msgstr "Fwmark 基准值不能为空"
+
+msgid "Fwmark base value must be at least 100"
+msgstr "Fwmark 基准值必须大于等于 100"
+
+msgid "Fwmark base value conflicts with another app"
+msgstr "Fwmark 基准值与其他应用冲突"
+
+msgid "Configure LAN devices that need app rate limiting. Devices must use static IP addresses."
+msgstr "配置需要进行应用限速的局域网设备。设备必须使用固定IP地址。"
+
+msgid "Device List"
+msgstr "设备列表"
+
+msgid "Device Name"
+msgstr "设备名称"
+
+msgid "Easy-to-identify device name, e.g.: John's Phone, Living Room TV"
+msgstr "易于识别的设备名称，例如：小明的手机、客厅电视"
+
+msgid "Optional device description or model"
+msgstr "可选的设备描述或型号"
+
+msgid "IP Address"
+msgstr "IP 地址"
+
+msgid "Device's static IP address. Recommend configuring in Network → DHCP/DNS → Static Leases"
+msgstr "设备的固定IP地址。建议在 网络 → DHCP/DNS → 静态租约 中配置"
+
+msgid "IP address cannot be empty"
+msgstr "IP 地址不能为空"
+
+msgid "Invalid IPv4 address format"
+msgstr "无效的 IPv4 地址格式"
+
+msgid "IP address conflicts with another device"
+msgstr "IP 地址与其他设备冲突"
+
+msgid "Configure upload and download bandwidth limits for specific apps on specific devices. Rate (guaranteed) is minimum guaranteed bandwidth, Ceil (ceiling) is maximum bandwidth."
+msgstr "为特定设备的特定应用配置上传和下载带宽限制。Rate（保证）为最小保证带宽，Ceil（上限）为最大带宽。"
+
+msgid "Rate Limit Rules"
+msgstr "限速规则列表"
+
+msgid "Device"
+msgstr "设备"
+
+msgid "Select target device"
+msgstr "选择目标设备"
+
+msgid "Application"
+msgstr "应用"
+
+msgid "Select target application"
+msgstr "选择目标应用"
+
+msgid "Upload Rate"
+msgstr "上行保证"
+
+msgid "Minimum guaranteed upload bandwidth"
+msgstr "最小保证上传带宽"
+
+msgid "Upload Ceil"
+msgstr "上行上限"
+
+msgid "Maximum upload bandwidth"
+msgstr "最大上传带宽"
+
+msgid "Download Rate"
+msgstr "下行保证"
+
+msgid "Minimum guaranteed download bandwidth"
+msgstr "最小保证下载带宽"
+
+msgid "Download Ceil"
+msgstr "下行上限"
+
+msgid "Maximum download bandwidth"
+msgstr "最大下载带宽"
+
+msgid "Bandwidth value cannot be empty"
+msgstr "带宽值不能为空"
+
+msgid "Invalid bandwidth format, e.g.: 512kbit, 1mbit, 100mbps"
+msgstr "带宽格式错误，例如：512kbit, 1mbit, 100mbps"
+
+msgid "Must select a device"
+msgstr "必须选择一个设备"
+
+msgid "This device already has a rate limit rule for this app"
+msgstr "该设备已配置此应用的限速规则"
+
+msgid "Configure external rule subscription sources (e.g. Clash Rule Set) for automatic rule updates. Supports downloading rules from URL and applying to corresponding apps."
+msgstr "配置外部规则订阅源（如 Clash Rule Set），实现规则自动更新与扩充。支持从URL自动下载规则并应用到对应应用。"
+
+msgid "Rule sources can automatically download domain and IP rules from external URLs and merge them into corresponding apps. Click 'Update Rules Now' button to manually trigger update."
+msgstr "规则源可以从外部URL自动下载域名和IP规则，并合并到对应应用中。点击'立即更新规则'按钮可手动触发更新。"
+
+msgid "Rule Source List"
+msgstr "规则源列表"
+
+msgid "Type"
+msgstr "类型"
+
+msgid "Associated App"
+msgstr "关联应用"
+
+msgid "Bind downloaded rules to which application"
+msgstr "将下载的规则绑定到哪个应用"
+
+msgid "Rule URL"
+msgstr "规则 URL"
+
+msgid "Clash rule file download URL (supports HTTPS/jsdelivr)"
+msgstr "Clash 规则文件的下载地址 (支持 HTTPS/jsdelivr)"
+
+msgid "URL cannot be empty"
+msgstr "URL 不能为空"
+
+msgid "Must start with http:// or https://"
+msgstr "必须以 http:// 或 https:// 开头"
+
+msgid "Manual Update"
+msgstr "手动更新"
+
+msgid "Disabled"
+msgstr "未启用"
+
+msgid "Running"
+msgstr "运行中"
+
+msgid "Stopped"
+msgstr "已停止"
+
+msgid "Never updated"
+msgstr "从未更新"
+
+msgid "Last Update"
+msgstr "最后更新"
+
+msgid "Configuration Statistics"
+msgstr "配置统计"
+
+msgid "Apps"
+msgstr "应用"
+
+msgid "Devices"
+msgstr "设备"
+
+msgid "Rules"
+msgstr "规则"
+
+msgid "Restart Service"
+msgstr "重启服务"
+
+msgid "Stop Service"
+msgstr "停止服务"
+
+msgid "Start Service"
+msgstr "启动服务"
+
+msgid "Restarting service will clear existing rules and reload configuration, can fix duplicate rules issue"
+msgstr "重启服务将清除现有规则并重新加载配置，可解决重复规则问题"
+
+msgid "Update Rules Now"
+msgstr "立即更新规则"
+
+msgid "Download latest rules from all enabled rule sources and reload service. This may take a few seconds."
+msgstr "从所有启用的规则源下载最新规则并重新加载服务。这可能需要几秒钟时间。"
